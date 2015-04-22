@@ -36,7 +36,7 @@ func init() {
 	FuncMap = template.FuncMap{}
 }
 
-func Render(rw http.ResponseWriter, r *http.Request, templateName string, data interface{}) {
+func Page(rw http.ResponseWriter, r *http.Request, templateName string, data interface{}) {
 	log.Printf("Rendering: %s\n", templateName)
 	FuncMap["toggle"] = toggle(true)
 
@@ -46,23 +46,23 @@ func Render(rw http.ResponseWriter, r *http.Request, templateName string, data i
 	)
 
 	if err != nil {
-		RenderError(rw, r, err, templateName, data)
+		Error(rw, r, err, templateName, data)
 		return
 	}
 	err = tmpl.ExecuteTemplate(rw, "base", data)
 	if err != nil {
-		RenderError(rw, r, err, templateName, data)
+		Error(rw, r, err, templateName, data)
 		return
 	}
 }
 
-func RenderError(rw http.ResponseWriter, r *http.Request, err error, templateName string, data interface{}) {
+func Error(rw http.ResponseWriter, r *http.Request, err error, templateName string, data interface{}) {
 	log.Printf("Rendering Error: %s\n", err)
 	if templateName == errorTemplateName {
 		rw.Write([]byte(fmt.Sprintf("Error rendering error. Oops. %s", err)))
 		return
 	}
-	Render(rw, r, errorTemplateName, ErrorPageData{
+	Page(rw, r, errorTemplateName, ErrorPageData{
 		Title:        "Error!",
 		Error:        err,
 		TemplateName: templateName,
@@ -70,20 +70,20 @@ func RenderError(rw http.ResponseWriter, r *http.Request, err error, templateNam
 	})
 }
 
-func RenderJSON(rw http.ResponseWriter, r *http.Request, responseData interface{}) {
+func JSON(rw http.ResponseWriter, r *http.Request, responseData interface{}) {
 	log.Printf("Rendering JSON")
 
 	rw.Header().Set("Content-Type", "application/json")
 
 	jsonOutput, err := json.Marshal(responseData)
 	if err != nil {
-		RenderInternalErrorJSON(rw, r, responseData, err)
+		InternalErrorJSON(rw, r, responseData, err)
 		return
 	}
 	rw.Write(jsonOutput)
 }
 
-func RenderInternalErrorJSON(rw http.ResponseWriter, r *http.Request, responseData interface{}, err error) {
+func InternalErrorJSON(rw http.ResponseWriter, r *http.Request, responseData interface{}, err error) {
 	log.Printf("Rendering internal error JSON: %s", err)
 
 	http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -102,7 +102,10 @@ func RenderInternalErrorJSON(rw http.ResponseWriter, r *http.Request, responseDa
 	rw.Write(jsonOutput)
 }
 
-func RenderUserErrorJSON(rw http.ResponseWriter, r *http.Request, responseData map[string]interface{}, err error) {
+func UserErrorJSON(rw http.ResponseWriter, r *http.Request, responseData map[string]interface{}, err error) {
+	if responseData == nil {
+		responseData = make(map[string]interface{})
+	}
 	log.Printf("Rendering internal error JSON: %s", err)
 
 	http.Error(rw, err.Error(), http.StatusBadRequest)
